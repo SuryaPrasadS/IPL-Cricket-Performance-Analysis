@@ -1,0 +1,1982 @@
+---
+title: "Essentials of Data Analytics Project Report - Cricket Performance Analytics"
+author: "Surya Prasad S"
+date: "17/03/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Setup
+
+
+```{r}
+rm(list=ls())
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggpubr)
+setwd("G:/VIT/Winter Semester 2020-21/Essentials Of Data Analytics/Project")
+getwd()
+```
+
+* * *
+
+## What problem are you trying to solve?
+
+
+### 1. Evaluating the impact of players in different phases of the game through a performance index considering the match situation and ground conditions. This would help in teams picking the right players for the right roles in their teams. (Player Selection and Team Recommendation)
+
+### 2. Score Predictor for the given match. The predictor takes into account the Match situation and Ground Conditions (Score, Overs, Number of Wickets Left, Opposition, Ground). This would help the viewers know who is ahead in terms of winning the match. (Win Predictor)
+
+
+* * *
+
+## What data have you chosen?(Chosen Dataset, Source of dataset, Description of dataset, basic commands to describe dataset)
+
+
+### Chosen Dataset: Indian Premier League (Cricket) : Ball-By-Ball Cricket Data
+
+### Source of Dataset: Kaggle (https://www.kaggle.com/nowke9/ipldata)
+
+### Description of Dataset: 
+
+### All Indian Premier League Cricket matches between 2008 and 2019.
+
+### This is the ball by ball data of all the IPL cricket matches till season 12.
+
+### The dataset contains 2 files: deliveries.csv and matches.csv.
+
+### matches.csv contains details related to the match such as location, contesting teams, umpires, results, etc.
+
+### deliveries.csv is the ball-by-ball data of all the IPL matches including data of the batting team, batsman, bowler, non-striker, runs scored, etc.
+
+```{r}
+deliveries = read.csv("deliveries.csv")
+matches = read.csv("matches.csv")
+str(deliveries)
+str(matches)
+head(deliveries,5)
+head(matches,5)
+View(deliveries)
+View(matches)
+```
+
+
+* * *
+
+## Frame your objectives
+
+
+### 1. Auction Model for Player Selection and Team Recommendation using Player Performance Index
+
+### 2. Scoring Pattern Analysis for knowing the batting pattern of teams
+
+### 3. Win Predictor for knowing who is winning the match
+
+
+* * *
+
+## Data Cleaning
+
+
+### Cleaning deliveries.csv
+
+
+```{r}
+sum(is.na(deliveries))
+```
+####  Replacing the names of the teams with their respective abbreviations
+
+```{r}
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Royal Challengers Bangalore", "RCB"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Sunrisers Hyderabad", "SRH"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Chennai Super Kings", "CSK"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Mumbai Indians", "MI"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Kolkata Knight Riders", "KKR"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Delhi Daredevils", "DC"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Delhi Capitals", "DC"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Rajasthan Royals", "RR"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Deccan Chargers", "SRH"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Rising Pune Supergiant", "RPS"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Rising Pune Supergiants", "RPS"))
+
+deliveries = deliveries%>%
+  mutate(batting_team = replace(batting_team,batting_team == "Pune Warriors", "RPS"))
+
+deliveries= deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Kings XI Punjab", "KXIP"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Gujarat Lions", "GL"))
+
+deliveries = deliveries %>%
+  mutate(batting_team = replace(batting_team,batting_team == "Kochi Tuskers Kerala", "KTK"))
+
+unique(deliveries$batting_team)
+
+```
+
+
+```{r}
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Royal Challengers Bangalore", "RCB"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Sunrisers Hyderabad", "SRH"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Chennai Super Kings", "CSK"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Mumbai Indians", "MI"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Kolkata Knight Riders", "KKR"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Delhi Daredevils", "DC"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Delhi Capitals", "DC"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Rajasthan Royals", "RR"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Deccan Chargers", "SRH"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Rising Pune Supergiant", "RPS"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Rising Pune Supergiants", "RPS"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Pune Warriors", "RPS"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Kings XI Punjab", "KXIP"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Gujarat Lions", "GL"))
+
+deliveries = deliveries %>%
+  mutate(bowling_team = replace(bowling_team,bowling_team == "Kochi Tuskers Kerala", "KTK"))
+
+unique(deliveries$bowling_team)
+
+```
+#### Adding some more columns to the dataset for clarity of mode of dismissal and runs scored
+
+```{r}
+deliveries$dismissal_kind = deliveries$dismissal_kind %>% as.character()
+deliveries$wicket = ifelse((deliveries$dismissal_kind=="" | deliveries$dismissal_kind=="run out"), 0, 1)
+deliveries$dismissal = ifelse((deliveries$dismissal_kind==""), 0, 1)
+deliveries$dot = ifelse((deliveries$total_runs==0), 1, 0)
+deliveries$boundary = ifelse((deliveries$total_runs==4 | deliveries$total_runs==6), 1, 0)
+deliveries$singles = if_else((deliveries$total_runs==1 | deliveries$total_runs==2 | deliveries$total_runs==3),1,0)
+
+```
+
+
+* * *
+
+### Cleaning matches.csv
+
+
+#### Dropping the Umpire 1 ,2, 3 Column from the dataset since it is not required for analysis
+
+```{r}
+sum(is.na(matches))
+sum(is.na(matches$umpire3))
+matches$umpire3 = NULL
+matches$umpire1 = NULL
+matches$umpire2 = NULL
+```
+
+#### Renaming names of teams with their abbreviations
+
+```{r}
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Royal Challengers Bangalore", "RCB"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Sunrisers Hyderabad", "SRH"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Chennai Super Kings", "CSK"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Mumbai Indians", "MI"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Kolkata Knight Riders", "KKR"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Delhi Daredevils", "DC"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Delhi Capitals", "DC"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Rajasthan Royals", "RR"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Deccan Chargers", "SRH"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Rising Pune Supergiant", "RPS"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Rising Pune Supergiants", "RPS"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Pune Warriors", "RPS"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Kings XI Punjab", "KXIP"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Gujarat Lions", "GL"))
+
+matches = matches %>%
+  mutate(team1 = replace(team1,team1 == "Kochi Tuskers Kerala", "KTK"))
+
+unique(matches$team1)
+
+```
+
+```{r}
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Royal Challengers Bangalore", "RCB"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Sunrisers Hyderabad", "SRH"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Chennai Super Kings", "CSK"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Mumbai Indians", "MI"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Kolkata Knight Riders", "KKR"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Delhi Daredevils", "DC"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Delhi Capitals", "DC"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Rajasthan Royals", "RR"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Deccan Chargers", "SRH"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Rising Pune Supergiant", "RPS"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Rising Pune Supergiants", "RPS"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Pune Warriors", "RPS"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Kings XI Punjab", "KXIP"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Gujarat Lions", "GL"))
+
+matches = matches %>%
+  mutate(team2 = replace(team2,team2 == "Kochi Tuskers Kerala", "KTK"))
+
+unique(matches$team2)
+
+```
+
+
+```{r}
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Royal Challengers Bangalore", "RCB"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Sunrisers Hyderabad", "SRH"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Chennai Super Kings", "CSK"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Mumbai Indians", "MI"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Kolkata Knight Riders", "KKR"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Delhi Daredevils", "DC"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Delhi Capitals", "DC"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Rajasthan Royals", "RR"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Deccan Chargers", "SRH"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Rising Pune Supergiant", "RPS"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Rising Pune Supergiants", "RPS"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Pune Warriors", "RPS"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Kings XI Punjab", "KXIP"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Gujarat Lions", "GL"))
+
+matches = matches %>%
+  mutate(toss_winner = replace(toss_winner,toss_winner == "Kochi Tuskers Kerala", "KTK"))
+
+unique(matches$toss_winner)
+
+```
+
+
+```{r}
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Royal Challengers Bangalore", "RCB"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Sunrisers Hyderabad", "SRH"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Chennai Super Kings", "CSK"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Mumbai Indians", "MI"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Kolkata Knight Riders", "KKR"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Delhi Daredevils", "DC"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Delhi Capitals", "DC"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Rajasthan Royals", "RR"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Deccan Chargers", "SRH"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Rising Pune Supergiant", "RPS"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Rising Pune Supergiants", "RPS"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Pune Warriors", "RPS"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Kings XI Punjab", "KXIP"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Gujarat Lions", "GL"))
+
+matches = matches %>%
+  mutate(winner = replace(winner,winner == "Kochi Tuskers Kerala", "KTK"))
+
+matches  = matches %>%
+   mutate(winner = replace(winner,winner == "", "None"))
+
+unique(matches$winner)
+
+```
+
+#### Replacing missing value in the City Column 
+
+```{r}
+matches = matches %>%
+  mutate(city = replace(city,city == "","Dubai"))
+unique(matches$city)
+
+```
+
+* * *
+
+
+## Merging 2 datasets
+
+```{r}
+dataset = merge(deliveries,matches,by.x = "match_id", by.y = "id")
+View(dataset)
+summary(dataset)
+```
+
+* * *
+
+## Basic Analysis
+
+
+### 1. Top 10 Teams with Most Wins
+
+```{r}
+ dataset %>% 
+  filter(result == "normal" | result == "tie") %>% 
+  group_by(winner) %>% 
+  summarise(Wins = n_distinct(match_id)) %>%  
+  ggplot(aes(x = reorder(winner, -Wins), y = Wins))+geom_bar(aes(fill = winner), stat = "identity")+
+  labs(title = "Teams Performance", x = "Team", y = "Total wins")+
+  theme(axis.text.x=element_text(angle=75, hjust=1), plot.title = element_text(size = 8, face = "bold"),text = element_text(size=8))
+```
+
+#### Inference: MI and CSK are the best teams in the competition with more than 80 wins across the 12 years of the tournament.
+
+* * *
+
+### 2. Top 10 Batsman with Most Runs
+
+```{r}
+dataset %>% 
+  group_by(batsman) %>% 
+  summarise(total_runs = sum(batsman_runs)) %>% 
+  arrange(desc(total_runs)) %>% 
+  top_n(n = 10, wt = total_runs) %>% 
+  ggplot(aes(x = reorder(batsman, -total_runs), y = total_runs))+
+  geom_bar(aes(fill = batsman),stat = "identity")+
+  labs(title = "Top 10 Batsman", x = "Batsman", y = "Total Runs")+
+  theme(axis.text.x=element_text(angle=75, hjust=1), plot.title = element_text(size = 8, face = "bold"),text = element_text(size=8))
+```
+
+#### Inference: Virat Kohli and Raina have the best performers with the bat with more than 4000 runs in 12 years of the tournament.
+
+* * *
+
+### 3. Top 10 Bowlers with Most Wickets
+
+```{r}
+dataset %>% 
+  group_by(bowler) %>% 
+  summarise(total_wickets = sum(dismissal)) %>% 
+  arrange(desc(total_wickets)) %>% 
+  top_n(n= 10, wt = total_wickets) %>% 
+  ggplot(aes(x = reorder(bowler,-total_wickets), y= total_wickets))+
+  geom_bar(aes(fill= bowler), stat = "identity")+
+  labs(title = "Top 10 Bowlers", x = "Bowler", y = "Total Wickets")+
+  theme(axis.text.x=element_text(angle=75, hjust=1), plot.title = element_text(size = 8, face = "bold"),text = element_text(size=8))
+```
+
+#### Inference: Malinga and Bravo have been the highest wicket takers in the tournament with more than 150 wickets. Amit Mishra is the highest wicket taker among spinners.
+
+* * *
+
+### 4. Top 10 Fielders with Most Catches
+
+```{r}
+dataset %>% 
+group_by(fielder) %>% 
+summarise(total_catches = length(dismissal_kind[dismissal_kind=="caught"])) %>% 
+arrange(desc(total_catches)) %>% 
+top_n(n= 10, wt = total_catches) %>% 
+ggplot(aes(x = reorder(fielder, -total_catches), y= total_catches))+
+geom_bar(aes(fill= fielder), stat = "identity")+
+labs(title = "Top 10 Fielders (Most Catches)", x = "Fielder", y = "Total Catches")+
+theme(axis.text.x=element_text(angle=75, hjust=1), plot.title = element_text(size = 8, face = "bold"),text = element_text(size=8))
+```
+
+#### Inference: MS Dhoni and Dinesh Karthik have been the top wicket keepers in the tournament while Raina has been the best fielder in the league with the most catches.
+
+* * *
+
+### 5. Team Performance at Home and Away Matches through win percentage
+
+```{r}
+t <- dataset %>% 
+  filter((result=="normal" | result == "tie") & batting_team %in% c("KKR","CSK","DC","MI","SRH","RCB","RR","KXIP"))
+
+kkr_match_played <- t %>% 
+  filter(batting_team=="KKR") %>% 
+  mutate(ground_type = if_else(city == "Kolkata","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_match_played = n_distinct(match_id))
+
+kkr_match_won <- t %>% 
+  filter(batting_team=="KKR" & winner == "KKR") %>% 
+  mutate(ground_type = if_else(city == "Kolkata","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_win = n_distinct(match_id))
+
+KKR<-merge(kkr_match_played, kkr_match_won, by ="ground_type")
+
+KKR<-KKR %>% 
+  mutate(winning_perc = (total_win/total_match_played)*100,
+         team = "KKR") 
+
+csk_match_played<-t %>% 
+  filter(batting_team=="CSK") %>% 
+  mutate(ground_type = if_else(city == "Chennai","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_match_played = n_distinct(match_id))
+
+csk_match_won<-t %>% 
+  filter(batting_team=="CSK" & winner == "CSK") %>% 
+  mutate(ground_type = if_else(city == "Chennai","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_win = n_distinct(match_id))
+
+CSK<-merge(csk_match_played, csk_match_won, by ="ground_type")
+
+CSK<-CSK %>% 
+  mutate(winning_perc = (total_win/total_match_played)*100,
+         team ="CSK") 
+
+mi_match_played<-t %>% 
+  filter(batting_team=="MI") %>% 
+  mutate(ground_type = if_else(city == "Mumbai","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_match_played = n_distinct(match_id))
+
+mi_match_won<-t %>% 
+  filter(batting_team=="MI" & winner == "MI") %>% 
+  mutate(ground_type = if_else(city == "Mumbai","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_win = n_distinct(match_id))
+
+MI<-merge(mi_match_played, mi_match_won, by ="ground_type")
+
+MI<-MI %>% 
+  mutate(winning_perc = (total_win/total_match_played)*100,
+         team= "MI") 
+
+KXIP_match_played<-t %>% 
+  filter(batting_team=="KXIP") %>% 
+  mutate(ground_type = if_else(city == "Chandigarh","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_match_played = n_distinct(match_id))
+
+KXIP_match_won<-t %>% 
+  filter(batting_team=="KXIP" & winner == "KXIP") %>% 
+  mutate(ground_type = if_else(city == "Chandigarh","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_win = n_distinct(match_id))
+
+KXIP<-merge(KXIP_match_played, KXIP_match_won, by ="ground_type")
+
+KXIP<-KXIP %>% 
+  mutate(winning_perc = (total_win/total_match_played)*100,
+         team="KXIP") 
+
+RR_match_played<-t %>% 
+  filter(batting_team=="RR") %>% 
+  mutate(ground_type = if_else(city == "Jaipur","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_match_played = n_distinct(match_id))
+
+RR_match_won<-t %>% 
+  filter(batting_team=="RR" & winner == "RR") %>% 
+  mutate(ground_type = if_else(city == "Jaipur","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_win = n_distinct(match_id))
+
+RR<-merge(RR_match_played, RR_match_won, by ="ground_type")
+
+RR<-RR %>% 
+  mutate(winning_perc = (total_win/total_match_played)*100,
+         team = "RR") 
+
+RCB_match_played<-t %>% 
+  filter(batting_team=="RCB") %>% 
+  mutate(ground_type = if_else(city == "Bangalore","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_match_played = n_distinct(match_id))
+
+RCB_match_won<-t %>% 
+  filter(batting_team=="RCB" & winner == "RCB") %>% 
+  mutate(ground_type = if_else(city == "Bangalore","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_win = n_distinct(match_id))
+
+RCB<-merge(RCB_match_played, RCB_match_won, by ="ground_type")
+
+RCB<-RCB %>% 
+  mutate(winning_perc = (total_win/total_match_played)*100,
+         team ="RCB")
+
+DC_match_played<-t %>% 
+  filter(batting_team=="DC") %>% 
+  mutate(ground_type = if_else(city == "Delhi","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_match_played = n_distinct(match_id))
+
+DC_match_won<-t %>% 
+  filter(batting_team=="DC" & winner == "DC") %>% 
+  mutate(ground_type = if_else(city == "Delhi","Home","Away")) %>% 
+  group_by(ground_type) %>% 
+  summarise(total_win = n_distinct(match_id))
+
+DC<-merge(DC_match_played, DC_match_won, by ="ground_type")
+
+DC<-DC %>% 
+  mutate(winning_perc = (total_win/total_match_played)*100,
+         team = "DC")
+
+
+team_performances<-rbind(CSK, DC,KKR,MI,KXIP,RCB,RR)
+
+team_performances %>% 
+ggplot(aes(x = team, y =winning_perc,fill = ground_type))+
+  geom_bar(stat = "identity", position = "dodge")+
+  labs(title = "Teams Performance", x = "Team", y = "Winning Percentage")+
+  theme(axis.text.x=element_text(angle=75, hjust=1), plot.title = element_text(size = 8, face = "bold"),text = element_text(size=8))
+```
+
+#### Inference: CSK and RR have the highest win percentage at their home grounds compared to other teams. CSK and MI have been the best performing teams away from their home grounds. This shows why they are one of the best franchises in the tournament because of their ability to maximise their home advantage and win almost 50 percentage of their away matches as well.
+
+
+* * *
+
+## Team Wise Performance Analysis
+
+
+###  Phase Wise Analysis of Teams
+
+
+#### PowerPlay Analysis
+
+```{r}
+team_pp_runs = dataset %>%
+  filter(over<=6, is_super_over == 0) %>%
+  group_by(batting_team,match_id) %>%
+  summarise(pp_runs = sum(total_runs)) %>%
+  arrange(desc(pp_runs))
+
+team_mean_pp_runs = team_pp_runs %>%
+  group_by(batting_team) %>%
+  summarise(avg_pp_runs = mean(pp_runs)) %>%
+  arrange(desc(avg_pp_runs))
+
+team_pp_wickets = dataset %>%
+  filter(over<=6, is_super_over == 0) %>%
+  group_by(bowling_team,match_id) %>%
+  summarise(pp_wickets = sum(dismissal)) %>%
+  arrange(desc(pp_wickets))
+
+team_mean_pp_wickets = team_pp_wickets %>%
+  group_by(bowling_team) %>%
+  summarise(avg_pp_wickets = mean(pp_wickets)) %>%
+  arrange(desc(avg_pp_wickets))
+
+team_mean_pp_runs
+team_mean_pp_wickets
+```
+
+
+```{r}
+ggplot(team_mean_pp_runs,aes(x=batting_team,y=avg_pp_runs))+
+  geom_point(color="red",size=3)+labs(x="Batting Team",y="Average PowerPlay Runs",title="Average PowerPlay Score (Overs 1-6)")
+```
+
+#### Inference: GL and KTK have been the higher scoring teams in Powerplay across seasons.
+
+
+```{r}
+ggplot(team_mean_pp_wickets,aes(x=bowling_team,y=avg_pp_wickets))+
+  geom_point(color="green",size=3)+labs(x="Bowling Team",y="Average PowerPlay Wickets",title="Average PowerPlay Wickets (Overs 1-6)")
+```
+
+#### Inference: KTK,RR,CSK,GL have picked the most wickets in Powerplay across seasons.
+
+* * *
+
+#### Middle Overs Analysis
+
+```{r}
+team_mo_runs = dataset %>%
+  filter((over > 6 & over <=15), is_super_over == 0) %>%
+  group_by(batting_team,match_id) %>%
+  summarise(mo_runs = sum(total_runs)) %>%
+  arrange(desc(mo_runs))
+
+team_mean_mo_runs = team_mo_runs %>%
+  group_by(batting_team) %>%
+  summarise(avg_mo_runs = mean(mo_runs)) %>%
+  arrange(desc(avg_mo_runs))
+
+
+team_mo_wickets = dataset %>%
+  filter((over > 6 & over <=15), is_super_over == 0) %>%
+  group_by(bowling_team,match_id) %>%
+  summarise(mo_wickets = sum(dismissal)) %>%
+  arrange(desc(mo_wickets))
+
+team_mean_mo_wickets = team_mo_wickets %>%
+  group_by(bowling_team) %>%
+  summarise(avg_mo_wickets = mean(mo_wickets)) %>%
+  arrange(desc(avg_mo_wickets))
+
+
+
+team_mean_mo_runs
+team_mean_mo_wickets
+
+```
+
+```{r}
+ggplot(team_mean_mo_runs,aes(x=batting_team,y=avg_mo_runs))+
+  geom_point(color="red",size=3)+labs(x="Batting Team",y="Average Middle Over Runs",title="Average Middle Overs Score (Overs 7-15)")
+```
+
+
+#### Inference: GL have the highest middle overs score across seasons
+
+
+```{r}
+ggplot(team_mean_mo_wickets,aes(x=bowling_team,y=avg_mo_wickets))+
+  geom_point(color="green",size=3)+labs(x="Bowling Team",y="Average Middle Over Wickets",title="Average Middle Overs Wickets (Overs 7-15)")
+```
+
+#### Inference: CSK have picked the most wickets in middle overs across seasons.
+
+* * *
+
+#### Death Overs Analysis
+
+```{r}
+team_do_runs = dataset %>%
+  filter((over > 15  & over <=20), is_super_over == 0) %>%
+  group_by(batting_team,match_id) %>%
+  summarise(do_runs = sum(total_runs)) %>%
+  arrange(desc(do_runs))
+
+team_mean_do_runs = team_do_runs %>%
+  group_by(batting_team) %>%
+  summarise(avg_do_runs = mean(do_runs)) %>%
+  arrange(desc(avg_do_runs))
+
+team_do_wickets = dataset %>%
+  filter((over > 15 & over <=20), is_super_over == 0) %>%
+  group_by(bowling_team,match_id) %>%
+  summarise(do_wickets = sum(dismissal)) %>%
+  arrange(desc(do_wickets))
+
+team_mean_do_wickets = team_do_wickets %>%
+  group_by(bowling_team) %>%
+  summarise(avg_do_wickets = mean(do_wickets)) %>%
+  arrange(desc(avg_do_wickets))
+
+team_mean_do_runs
+team_mean_do_wickets
+```
+
+```{r}
+ggplot(team_mean_do_runs,aes(x=batting_team,y=avg_do_runs))+
+  geom_point(color="red",size=3)+labs(x="Batting Team",y="Average Death Over Runs",title="Average Death Overs Score (Overs 16-20)")
+```
+
+#### Inference: CSK, RCB and MI have scored the most runs in this phase across seasons
+
+
+```{r}
+ggplot(team_mean_do_wickets,aes(x=bowling_team,y=avg_do_wickets))+
+  geom_point(color="green",size=3)+labs(x="Bowling Team",y="Average Death Over Wickets",title="Average Death Overs Wickets (Overs 16-20)")
+```
+
+#### Inference: CSK have picked the most wickets in this phase across seasons.
+
+
+* * *
+
+
+### Innings Wise Analysis of Teams
+
+
+```{r}
+team_inning1_score = dataset %>%
+  filter(inning == 1, is_super_over == 0) %>%
+  group_by(match_id,batting_team) %>%
+  summarise(first_inning_score = sum(total_runs))
+
+team_inning1_avg_score = team_inning1_score %>%
+  group_by(batting_team) %>%
+  summarise(first_inning_avg_score = mean(first_inning_score)) %>%
+  arrange(desc(first_inning_avg_score))
+
+team_inning2_score = dataset %>%
+  filter(inning == 2, is_super_over == 0) %>%
+  group_by(match_id,batting_team) %>%
+  summarise(second_inning_score = sum(total_runs))
+
+team_inning2_avg_score = team_inning2_score %>%
+  group_by(batting_team) %>%
+  summarise(second_inning_avg_score = mean(second_inning_score)) %>%
+  arrange(desc(second_inning_avg_score))
+
+team_inning1_avg_score
+team_inning2_avg_score
+
+ggplot(team_inning1_avg_score,aes(x=batting_team,y=first_inning_avg_score))+
+  geom_point(color="yellow",size=3)+labs(x="Batting Team",y="Average First Innings Score",title="Average First Innings Score for Teams")
+
+ggplot(team_inning2_avg_score,aes(x=batting_team,y=second_inning_avg_score))+
+  geom_point(color="red",size=3)+labs(x="Batting Team",y="Average Second Innings Score",title="Average Second Innings Score for Teams")
+```
+
+
+#### Inference: RCB and GL have the highest average runs scored in the first and second innings of the T20 match. 
+
+
+```{r}
+team_inning1_wickets = dataset %>%
+  filter(inning == 1, is_super_over == 0) %>%
+  group_by(bowling_team,match_id) %>%
+  summarise(first_inning_wickets = sum(dismissal))
+
+team_inning1_avg_wickets = team_inning1_wickets %>%
+  group_by(bowling_team) %>%
+  summarise(first_inning_avg_wickets = mean(first_inning_wickets)) %>%
+  arrange(desc(first_inning_avg_wickets))
+
+team_inning2_wickets = dataset %>%
+  filter(inning == 2, is_super_over == 0) %>%
+  group_by(bowling_team,match_id) %>%
+  summarise(second_inning_wickets = sum(dismissal))
+
+team_inning2_avg_wickets = team_inning2_wickets %>%
+  group_by(bowling_team) %>%
+  summarise(second_inning_avg_wickets = mean(second_inning_wickets)) %>%
+  arrange(desc(second_inning_avg_wickets))
+
+team_inning1_avg_wickets
+team_inning2_avg_wickets
+
+ggplot(team_inning1_avg_wickets,aes(x=bowling_team,y=first_inning_avg_wickets))+
+  geom_point(color="yellow",size=3)+labs(x="Bowling Team",y="Average First Innings Wickets Taken",title="Average First Innings Wickets for Teams")
+
+ggplot(team_inning2_avg_wickets,aes(x=bowling_team,y=second_inning_avg_wickets))+
+  geom_point(color="red",size=3)+labs(x="Bowling Team",y="Average Second Innings Wickets Taken",title="Average Second Innings Wickets for Teams")
+```
+
+#### Inference: CSK have picked up the most wickets in a T20 match across 12 seasons of the IPL.
+
+
+* * *
+
+
+### Season Wise Analysis of the 2 most successful franchises (CSK AND MI)
+
+
+#### Overall Average Score of CSK AND MI
+
+```{r}
+csk_mi_season_score = dataset %>%
+  filter(is_super_over == 0, (batting_team == "CSK" | batting_team == "MI")) %>%
+  group_by(match_id,season,batting_team) %>%
+  summarise(score = sum(total_runs))
+
+csk_mi_season_avg_score = csk_mi_season_score %>%
+  group_by(season,batting_team) %>%
+  summarise(avg_score = mean(score))
+
+csk_mi_season_avg_score
+
+ggplot(csk_mi_season_avg_score,aes(x = season, y=avg_score, color = batting_team))+geom_point()+
+  geom_line()+labs(x="Batting Team",y="Average Score",title="Average Score for CSK and MI across Seasons")
+
+```
+
+#### Inference: CSK have been scoring more runs consistently in a T20 match across the 12 years of IPL compared to their arch-rivals MI.
+
+* * *
+
+#### Overall Average Wickets of CSK AND MI 
+
+```{r}
+csk_mi_season_wickets = dataset %>%
+  filter(is_super_over == 0, (bowling_team == "CSK" | bowling_team == "MI")) %>%
+  group_by(match_id,season,bowling_team) %>%
+  summarise(wickets = sum(dismissal))
+
+csk_mi_season_avg_wickets = csk_mi_season_wickets %>%
+  group_by(season,bowling_team) %>%
+  summarise(avg_wickets= mean(wickets))
+
+csk_mi_season_avg_wickets
+
+ggplot(csk_mi_season_avg_wickets,aes(x = season, y=avg_wickets, color = bowling_team))+geom_point()+
+  geom_line()+labs(x="Bowling Team",y="Average Wickets Taken",title="Average Wickets for CSK and MI across Seasons")
+
+```
+
+#### Inference: CSK are ahead of MI in terms of average wickets picked up in a match across the 12 seasons of the IPL.
+
+
+* * *
+
+## Venue Wise Performance Analysis
+
+
+### Analysis is done only for the matches played in Indian Venues
+
+```{r}
+indian_venues = dataset %>%
+  filter(city == "Mumbai" | city == "Chennai" | city == "Delhi" | city == "Kolkata" | city == "Hyderabad" | city == "Bangalore" | city == "Mohali" | city == "Jaipur" | city == "Pune" | city == "Kochi" | city == "Rajkot")
+
+indian_venues = indian_venues %>%
+  mutate(venue = replace(venue,venue == "Feroz Shah Kotla Ground", "Feroz Shah Kotla"))
+
+indian_venues = indian_venues %>%
+  mutate(venue = replace(venue,venue == "Dr DY Patil Sports Academy", "Wankhede Stadium"))
+
+indian_venues = indian_venues %>%
+  mutate(venue = replace(venue,venue == "Brabourne Stadium", "Wankhede Stadium"))
+
+indian_venues = indian_venues %>%
+  mutate(venue = replace(venue,venue == "Subrata Roy Sahara Stadium", "Maharashtra Cricket Association Stadium"))
+
+indian_venues = indian_venues %>%
+  mutate(venue = replace(venue,venue == "M. A. Chidambaram Stadium", "MA Chidambaram Stadium, Chepauk"))
+
+indian_venues = indian_venues %>%
+  mutate(venue = replace(venue,venue == "IS Bindra Stadium", "Punjab Cricket Association IS Bindra Stadium, Mohali"))
+
+indian_venues = indian_venues %>%
+  mutate(venue = replace(venue,venue == "Rajiv Gandhi Intl. Cricket Stadium", "Rajiv Gandhi International Stadium, Uppal"))
+
+
+unique(indian_venues$venue)
+```
+
+### Toss Decisions taken at Venues
+
+```{r}
+indian_venues_played = indian_venues %>%
+  group_by(venue) %>%
+  summarise(matches_played = n_distinct(match_id)) %>%
+  arrange(desc(matches_played))
+
+indian_venues_toss_field = indian_venues %>%
+  filter(toss_winner == winner, is_super_over == 0, toss_decision == "field") %>%
+  group_by(venue,toss_decision) %>%
+  summarise(matches_won = n_distinct(match_id)) %>%
+  arrange(desc(matches_won))
+
+indian_venues_toss_bat = indian_venues %>%
+  filter(toss_winner == winner, is_super_over == 0, toss_decision == "bat") %>%
+  group_by(venue,toss_decision) %>%
+  summarise(matches_won = n_distinct(match_id)) %>%
+  arrange(desc(matches_won))
+
+indian_venues_played
+indian_venues_toss_field
+indian_venues_toss_bat
+```
+
+#### Inference: Wankhede and Chinnaswamy Stadiums in Mumbai and Bangalore are better chasing grounds while MA Chidambaram Stadium are in Chennai is a better batting defending grounds.
+
+
+* * *
+
+
+### Phase Wise Analaysis
+
+
+#### Average Powerplay Score across Venues
+
+```{r}
+venue_pp_score = indian_venues %>%
+  filter(is_super_over == 0, over<=6, winner == batting_team) %>%
+  group_by(match_id,batting_team,venue,inning) %>%
+  summarise(pp_score = sum(total_runs)) %>%
+  arrange(desc(pp_score))
+
+venue_avg_pp_score = venue_pp_score %>%
+  group_by(venue) %>%
+  summarise(avg_pp_score = mean(pp_score)) %>%
+  arrange(desc(avg_pp_score))
+
+venue_avg_pp_score
+
+ggplot(venue_avg_pp_score,aes(x = venue, y=avg_pp_score, color = venue))+geom_point()+
+  geom_line()+labs(y="Average PP Score",title="Average Winning Powerplay Score Across Venues (Overs 1-6)")
+
+```
+
+#### Inference: Rajkot which is the home ground of GL is the highest scoring ground in the first 6 overs while Kochi which is the home ground of KTK is the least scoring ground in powerplay.
+
+
+* * *
+
+#### Average Middle Overs Score across Venues
+
+```{r}
+venue_mo_score = indian_venues %>%
+  filter(is_super_over == 0, over>6 & over<=15, winner == batting_team) %>%
+  group_by(match_id,batting_team,venue,inning) %>%
+  summarise(mo_score = sum(total_runs)) %>%
+  arrange(desc(mo_score))
+
+venue_avg_mo_score = venue_mo_score %>%
+  group_by(venue) %>%
+  summarise(avg_mo_score = mean(mo_score)) %>%
+  arrange(desc(avg_mo_score))
+
+venue_avg_mo_score
+
+ggplot(venue_avg_mo_score,aes(x = venue, y=avg_mo_score, color = venue))+geom_point()+
+  geom_line()+labs(x="Venues",y="Average MO Score",title="Average Winning Middle Overs Score Across Venues (Overs 7-15)")
+```
+
+#### Inference: Mohali, the home ground of KXIP is the highest scoring ground in the middle overs while Kochi, the home ground of KTK is the least scoring ground in the middle overs.
+
+
+* * *
+
+#### Average Death Overs Score Across Venues
+
+```{r}
+venue_do_score = indian_venues %>%
+  filter(is_super_over == 0, over>15 & over<=20, winner == batting_team) %>%
+  group_by(match_id,batting_team,venue,inning) %>%
+  summarise(do_score = sum(total_runs)) %>%
+  arrange(desc(do_score))
+
+venue_avg_do_score = venue_do_score %>%
+  group_by(venue) %>%
+  summarise(avg_do_score = mean(do_score)) %>%
+  arrange(desc(avg_do_score))
+
+venue_avg_do_score
+
+ggplot(venue_avg_do_score,aes(x = venue, y=avg_do_score, color = venue))+geom_point()+
+  geom_line()+labs(x="Venues",y="Average DO Score",title="Average Winning Death Overs Score Across Venues (Overs 16-20)")
+```
+
+
+#### Inference: Bangalore, which is home ground of RCB is the best scoring ground in the last stages of an innings while Nehru Stadium in Kochi is the lowest.
+
+
+* * *
+
+### Innings Wise Analysis
+
+#### Average Winning Score (1st Innings) across Venues
+
+```{r}
+venue_winning_inning1_score = indian_venues %>%
+  filter(inning == 1, is_super_over == 0, winner == batting_team) %>%
+  group_by(match_id,batting_team,venue) %>%
+  summarise(winning_inning1_score = sum(total_runs))
+
+venue_winning_avg_inning1_score = venue_winning_inning1_score %>%
+  group_by(venue) %>%
+  summarise(avg_winning_inning1_score = mean(winning_inning1_score))
+
+venue_winning_avg_inning1_score
+
+ggplot(venue_winning_avg_inning1_score,aes(x = venue, y=avg_winning_inning1_score, color = venue))+geom_point()+
+  geom_line()+labs(x="Venues",y="Average Winning Score",title="Average Wining Score Batting First Across Venues")
+
+```
+
+#### Inference: Mohali has the highest average winning score in the 1st Innings while Kochi has the lowest in the 1st Innings.
+
+
+* * *
+
+
+#### Average Chasing Score (2nd Innings) across Venues
+
+```{r}
+venue_winning_inning2_score = indian_venues %>%
+  filter(inning == 2, is_super_over == 0, winner == batting_team) %>%
+  group_by(match_id,batting_team,venue) %>%
+  summarise(winning_inning2_score = sum(total_runs))
+
+venue_winning_avg_inning2_score = venue_winning_inning2_score %>%
+  group_by(venue) %>%
+  summarise(avg_winning_inning2_score = mean(winning_inning2_score))
+
+venue_winning_avg_inning2_score
+
+ggplot(venue_winning_avg_inning2_score,aes(x = venue, y=avg_winning_inning2_score, color = venue))+geom_point()+
+  geom_line()+labs(x="Venues",y="Average Winning Score",title="Average Winning Score Batting Second Across Venues")
+```
+
+#### Inference: Mohali is a high scoring chasing ground while Kolkata, Delhi, Kochi are low scoring chasing grounds.
+
+
+* * *
+
+
+### Season Wise Analysis of the 2 most successful franchises (CSK AND MI)
+
+
+#### Comparing Chepauk Stadium and Wankhede Stadium (Home Grounds of CSK and MI)
+
+```{r}
+csk_mi_venue_season_score = indian_venues %>%
+  filter(is_super_over == 0, venue == "MA Chidambaram Stadium, Chepauk" | venue == "Wankhede Stadium",winner == batting_team) %>%
+  group_by(match_id,season,batting_team,venue,inning) %>%
+  summarise(first_inning_score = sum(total_runs))
+
+csk_mi_venue_avg_season_score = csk_mi_venue_season_score %>%
+  group_by(season,venue) %>%
+  summarise(avg_inning1_score = mean(first_inning_score))
+
+csk_mi_venue_avg_season_score
+
+ggplot(csk_mi_venue_avg_season_score,aes(x = season, y=avg_inning1_score, color = venue))+geom_point()+
+  geom_line()+labs(x="Venue",y="Average First Innings Score",title="Average Winning Score in Home Grounds of CSK and MI across seasons")
+
+```
+
+#### Inference: Home Ground of Chennai and Mumbai have traditionally been high scoring ground across the 12 seasons of the IPL. While the average score in Mumbai have consistently increased over the years from 140 to 180, Chennai has fairly been consistent in scoring around the 160 mark.
+
+* * *
+
+## Conclusion and Future Work
+
+### Based on the above conclusions drawn from venue wise and team wise performance analysis, teams can identify the phases in the game where they are lagging behind and plug those holes by picking appropriate players in the auctions according to their shortcomings and home ground conditions. This will improve their performance and chances of winning the championship.
+
+### Appropriate Player based analayis can be carried out on the same dataset in future to identify the best players according to the roles in different phases and venue conditions of the game. Hence, an effective model could be built for the teams to pick the right players in the upcoming auctions and assign roles and startegies to players.
+
+* * *
+
+## Player Performance Analysis
+
+### Create Primary Datasets for Players
+
+```{r}
+mat_ds <- matches %>%
+  select(
+    match_id = id,
+    season,
+    city,
+    team1,
+    team2,
+    toss_winner,
+    toss_dec = toss_decision,
+    winner,
+    pom = player_of_match,
+    venue
+  ) 
+
+del_ds <- deliveries %>%
+  select(
+    inning,
+    match_id,
+    over,
+    ball,
+    batsman,
+    bowler,
+    runs = batsman_runs,
+    bat_team = batting_team,
+    bowl_team = bowling_team,
+    total_runs,
+    dismissal_kind
+  ) %>%
+  gather(role, player, batsman:bowler) %>%
+  mutate(role=as.factor(role))
+```
+
+
+* * *
+
+### 1st Objective - Building a model to rank players by their playing calibre:
+
+#### A player value depends upon
+#### • his ability to score quick runs (highest strike rates) and bowl economically (lowest economy rates)
+
+#### • his contribution made to the runs scored by the team and the wickets dismissed by the team in matches that have been both won and lost by his team
+
+#### • his ability to score quick runs against top bowlers (we will consider top 20 bowlers by their economy rate) and to bowl economically against top batsmen (we will consider top 20 batsmen by their strike rates).
+
+#### • all players are rated as a batsman and as a bowler irrespective of their actual or primary domain.
+
+#### Hence, the nomenclature, “batsman” or “bowler” in the model building refers to all players.
+
+* * *
+
+### TOP_RATE_PLAYERS:
+
+#### Order of players with best batting striking rates & bowling economy rates 
+
+```{r}
+# Distribution of runs scored by batsmen
+del_ds %>%
+  filter(role == "batsman") %>%
+  group_by(player) %>%
+  summarize(runs_scored = sum(runs)) %>%
+  mutate(runs_scored = runs_scored + 1) %>%
+  ggplot(aes(runs_scored)) +
+  geom_histogram(aes(), bins=30, colour="black") +
+  scale_x_log10() 
+```
+
+```{r}
+# Distribution of runs given by bowlers
+del_ds %>%
+  filter(role == "bowler") %>%
+  group_by(player) %>%
+  summarize(runs_given = sum(runs)) %>%
+  mutate(runs_given = runs_given + 1) %>%
+  ggplot(aes(runs_given)) +
+  geom_histogram(aes(), bins=30, colour="black") +
+  scale_x_log10()
+```
+
+### Inference: The histogram distribution follows normal curve shape, hence we can assume the runs data distribution is normal.
+
+```{r}
+# Batsmen average & median number of balls and runs
+batsmen_avgs <- del_ds %>%
+  filter(role == "batsman") %>%
+  group_by(player) %>%
+  summarize(tot_balls = n(), tot_runs = sum(runs)) %>%
+  summarize (
+    avg_balls = mean(tot_balls),
+    median_balls = median(tot_balls),
+    avg_runs = mean(tot_runs),
+    median_runs = median(tot_runs),
+    max(tot_runs),
+    min(tot_runs),
+    max(tot_balls),
+    min(tot_balls)
+  )
+
+t(as.matrix(batsmen_avgs))
+
+```
+
+```{r}
+# Bowler average & median number of balls and runs
+bowler_avgs <- del_ds %>%
+  filter(role == "bowler") %>%
+  group_by(player) %>%
+  summarize(tot_balls = n(), tot_runs = sum(runs)) %>%
+  summarize (
+    avg_balls = mean(tot_balls),
+    median_balls = median(tot_balls),
+    avg_runs = mean(tot_runs),
+    median_runs = median(tot_runs),
+    max(tot_runs),
+    min(tot_runs),
+    max(tot_balls),
+    min(tot_balls)
+  )
+
+t(as.matrix(bowler_avgs))
+
+```
+
+### Inference: Now, we will calculate the strike rates for batsmen and economy rates for bowlers using regularization technique. We have earlier seen that the players with highest batting strike rates and best economy rates are not well known for their skills in respective domains (batting or bowling). However, they ended best because of the fact that they played very few balls, resulting in best rates. In order to neutralize this effect, we use penalties to calculate revised batting strike rates or bowling economy rates. From the batsmen and bowler statistics generated above we see the median values are much smaller than the average values. Hence, we use median values as the penalty terms to regularize as this will not effect much the rates of regular, known players in respective domains but will reduce the effects for the players who had batted/ bowled a very few balls. Then we take a look again at the players with highest batting strike rates and lowest economy rates.
+
+```{r}
+# Top players with strike rates & economy rates after regularisation using median runs 
+# and median balls
+str_rates <- del_ds %>%
+  filter(role == "batsman") %>%
+  group_by(player) %>%
+  summarize(reg_str_rate = (sum(runs) + batsmen_avgs$median_runs) / (n() +
+      batsmen_avgs$median_balls)) %>%
+  arrange(desc(reg_str_rate))
+
+str_rates %>%
+  head(20)
+```
+
+```{r}
+eco_rates <- del_ds %>%
+  filter(role == "bowler") %>%
+  group_by(player) %>%
+  summarize(reg_eco_rate = (sum(runs) + bowler_avgs$median_runs) / 
+(n() + bowler_avgs$median_balls)) %>%
+  arrange(reg_eco_rate)
+
+eco_rates %>%
+  head(20)
+```
+
+### Inference: Now as expected we can see that the top players for batting strike rates and bowling economy rates are alltop, regular players in the respective domains of batting and bowling. Next, using the regularized strike rates and economy rates, we construct top rated players, Naturally, we can expect all players who are in batsmen list may not figure in bowler list, and vice versa. This will reintroduce NAs when we try to combine strike rates and economy rates to arrive at player values. We use a similar technique as regularization to replace these NAs. For those players who have never batted, we will assume them to score minimum runs in maximum balls. Hence, we will use median runs and average balls for replacing NAs. Similarly, for players who have never bowled, we will assume them to give away more runs in less balls. Hence, we will use average runs and median balls for replacing NAs. With the above approach, let us see who are our top rated players.
+
+```{r}
+# Top rate players based on strike rates & economy rates
+top_rate_players <- str_rates %>%
+  full_join(eco_rates, by = "player") %>%
+  mutate(reg_str_rate = replace_na(
+    reg_str_rate,
+    batsmen_avgs$median_runs / batsmen_avgs$avg_balls
+  )) %>%
+  mutate(reg_eco_rate = replace_na(reg_eco_rate, bowler_avgs$avg_runs /
+                                     bowler_avgs$median_balls)) %>%
+  mutate(player_value = 100 * (reg_str_rate + 1 / reg_eco_rate)) 
+
+top_rate_players %>%
+  arrange(desc(player_value)) %>%
+  select(player, player_value) %>%
+  mutate(rank = row_number()) %>%
+  head(50) %>% 
+  knitr::kable()
+```
+
+### Inference: As we could see the list includes some match winning top all round players who are big hitters with high strike rates and bowl tight overs
+
+* * *
+
+### TOP_CONTRI_PLAYERS:
+
+### Order of players with best number of highest contributions in won & lost matches    
+
+```{r}
+# Which teams have won which matches and lost which matches
+# Which matches which teams have won
+won_t1 <- mat_ds %>%
+filter(winner != "") %>%
+filter(as.character(winner) == as.character(team1)) %>%
+select(match_id, team = team1)
+won_t2 <- mat_ds %>%
+filter(winner != "") %>%
+filter(as.character(winner) == as.character(team2)) %>%
+select(match_id, team = team2)
+won_matches <- won_t1 %>%
+bind_rows(won_t2)
+# Which matches which teams have lost
+lost_t1 <- mat_ds %>%
+filter(winner != "") %>%
+filter(as.character(winner) != as.character(team1)) %>%
+select(match_id, team = team1, winner)
+lost_t2 <- mat_ds %>%
+filter(winner != "") %>%
+filter(as.character(winner) != as.character(team2)) %>%
+select(match_id, team = team2, winner)
+lost_matches <- lost_t1 %>%
+bind_rows(lost_t2)
+
+```
+
+```{r}
+# Batsmen score contribution in won matches
+# Top scorer for winning sides
+batsman_contr_w <- del_ds %>%
+full_join(won_matches, by = "match_id") %>%
+filter(role == "batsman" & bat_team == team) %>%
+group_by(match_id, player) %>%
+summarize(batsman_score = sum(runs)) %>%
+top_n(1, batsman_score) %>%
+full_join(won_matches, by = "match_id")
+batsman_contr_w
+```
+
+```{r}
+# Bowler wicket taking contribution in won matches
+# Top wicket taker for winning sides
+bowler_contr_w <- del_ds %>%
+full_join(won_matches, by = "match_id") %>%
+filter(role=="bowler" & bowl_team == team) %>%
+filter (dismissal_kind %in% c("bowled", "caught", "caught and bowled", "hit wicket",
+"lbw", "stumped")) %>%
+select(match_id, team, bowl_team, player, dismissal_kind) %>%
+group_by(match_id, player) %>%
+summarize(bowler_wckts = n()) %>%
+top_n(1, bowler_wckts) %>%
+full_join(won_matches, by = "match_id")
+bowler_contr_w
+```
+
+```{r}
+# Top_batsmen on winning sides in the order of highest individual scores
+winning_t_scores <- del_ds %>%
+full_join(won_matches, by = "match_id") %>%
+filter(role == "batsman" & bat_team == team) %>%
+group_by(match_id) %>%
+summarize(team_score = sum(total_runs)) %>%
+full_join(batsman_contr_w, by = "match_id") %>%
+arrange(desc(batsman_score))
+winning_t_scores
+```
+
+```{r}
+# Top_batsmen on winning sides in terms no.of top_scores
+win_scores <- winning_t_scores %>%
+group_by(player) %>%
+summarize(batsman_count = n()) %>%
+arrange(desc(batsman_count))
+win_scores
+```
+
+```{r}
+# Top_bowlers on winning sides in terms no.of maximum wickets
+win_wickets <- bowler_contr_w %>%
+group_by(player) %>%
+summarize(bowler_count = n()) %>%
+arrange(desc(bowler_count))
+win_wickets
+```
+
+### Inference: We have found the top batsman and bowlers who top scored and took the most wickets for their teams the most times in winning causes across 12 seasons of the IPL.
+
+```{r}
+# Batsmen score contribution in lost matches
+# Top scorer for losing sides
+batsman_contr_l <- del_ds %>%
+full_join(lost_matches, by = "match_id") %>%
+filter(role == "batsman" & bat_team == team) %>%
+group_by(match_id, player) %>%
+summarize(batsman_score = sum(runs)) %>%
+top_n(1, batsman_score) %>%
+full_join(lost_matches, by = "match_id") %>%
+rename(losing_team=team)
+batsman_contr_l
+```
+
+```{r}
+# Bowler wicket taking contribution in lost matches
+# Top wicket taker for losing sides
+bowler_contr_l <- del_ds %>%
+full_join(lost_matches, by = "match_id") %>%
+filter(role=="bowler" & bowl_team == team) %>%
+filter(dismissal_kind %in% c("bowled", "caught", "caught and bowled", "hit wicket",
+"lbw", "stumped")) %>%
+select(match_id, team, bowl_team, player) %>%
+group_by(match_id, player) %>%
+summarize(bowler_wckts = n()) %>%
+top_n(1, bowler_wckts) %>%
+full_join(lost_matches, by = "match_id") %>%
+rename(losing_team=team)
+bowler_contr_l
+```
+
+```{r}
+# Top_batsmen on losing sides in the order of highest individual scores
+losing_t_scores <- del_ds %>%
+full_join(lost_matches, by = "match_id") %>%
+filter(role == "batsman" & bat_team == team) %>%
+group_by(match_id) %>%
+summarize(team_score = sum(total_runs)) %>%
+full_join(batsman_contr_l, by = "match_id") %>%
+arrange(desc(batsman_score))
+losing_t_scores
+```
+
+```{r}
+# Top_batsmen on losing sides in terms no.of top_scores
+loss_scores <- losing_t_scores %>%
+group_by(player) %>%
+summarize(batsman_count = n()) %>%
+arrange(desc(batsman_count))
+loss_scores
+```
+
+```{r}
+# Top_bowlers on losing sides in terms no.of maximum wickets
+loss_wickets <- bowler_contr_l %>%
+group_by(player) %>%
+summarize(bowler_count = n()) %>%
+arrange(desc(bowler_count))
+loss_wickets
+
+```
+
+### Inference: We have found the top batsman and bowlers who top scored and took the most wickets for their teams the most times in losing causes across 12 seasons of the IPL.
+
+```{r}
+# Top batsmen contribution in won matches & lost matches - arranged by contribution in WON matches
+top_contri_batsmen <- win_scores %>%
+rename(contribution_in_WON_matches = batsman_count) %>%
+full_join(loss_scores, by = "player") %>%
+rename(contribution_in_LOST_matches = batsman_count) %>%
+arrange(desc(contribution_in_WON_matches))
+top_contri_batsmen
+```
+
+```{r}
+# Top batsmen contribution in won matches & lost matches - arranged by contribution in LOST matches
+top_contri_batsmen <- win_scores %>%
+rename(contribution_in_WON_matches = batsman_count) %>%
+full_join(loss_scores, by = "player") %>%
+rename(contribution_in_LOST_matches = batsman_count) %>%
+arrange(desc(contribution_in_LOST_matches))
+top_contri_batsmen
+```
+
+```{r}
+# Top batsmen overall contribution in won matches & lost matches
+top_contri_batsmen <- top_contri_batsmen %>%
+mutate(batsman_contribution = contribution_in_LOST_matches +
+contribution_in_WON_matches) %>%
+select(
+player,
+batsman_contribution,
+contribution_in_LOST_matches,
+contribution_in_WON_matches
+) %>%
+arrange(desc(batsman_contribution))
+top_contri_batsmen
+```
+
+```{r}
+# Top bowlers contribution in won matches and lost matches - arranged by contribution in WON matches
+top_contri_bowlers <- win_wickets %>%
+rename(contribution_in_WON_matches = bowler_count) %>%
+full_join(loss_wickets, by = "player") %>%
+rename(contribution_in_LOST_matches = bowler_count) %>%
+arrange(desc(contribution_in_WON_matches))
+top_contri_bowlers
+
+```
+
+```{r}
+# Top bowlers contribution in won matches and lost matches - arranged by contribution in LOST matches
+top_contri_bowlers <- win_wickets %>%
+rename(contribution_in_WON_matches = bowler_count) %>%
+full_join(loss_wickets, by = "player") %>%
+rename(contribution_in_LOST_matches = bowler_count) %>%
+arrange(desc(contribution_in_LOST_matches))
+top_contri_bowlers
+
+```
+
+```{r}
+# Top bowlers overall contribution in won matches and lost matches
+top_contri_bowlers <- top_contri_bowlers %>%
+mutate(bowler_contribution = contribution_in_LOST_matches +
+contribution_in_WON_matches) %>%
+select(
+player,
+bowler_contribution,
+contribution_in_LOST_matches,
+contribution_in_WON_matches
+) %>%
+arrange(desc(bowler_contribution))
+top_contri_bowlers
+```
+
+### Inference: The most contributing players in terms of runs scored and wickets taken across 12 years of the IPL have been ordered in terms of contribution in winning causes. But, the contribution of players depends also depends on the number of matches they play, higher the matches they play, they have higher chances of contributing. Hence, we use median contribution and average matches in arriving at player contributions.
+
+```{r}
+# Top_contribution players in won/ lost matches
+top_contri_players <- top_contri_batsmen %>%
+  full_join(top_contri_bowlers, by="player") 
+
+top_contri_players <- as.data.frame(top_contri_players)
+
+top_contri_players[is.na(top_contri_players)] <- 0
+
+top_contri_players <- top_contri_players %>%
+  mutate(player_contribution = batsman_contribution + bowler_contribution) %>%
+  select(player,player_contribution, batsman_contribution, bowler_contribution)
+top_contri_players %>% 
+  arrange(desc(player_contribution))
+
+```
+
+```{r}
+# Average and median of top contribution by players
+stats_contri <- top_contri_players %>%
+summarize(avg_contri_pp = mean(player_contribution),
+med_contri_pp = median(player_contribution))
+
+# no.of matches played by each player
+matches_players <- del_ds %>%
+select(match_id, player) %>%
+group_by(player, match_id) %>%
+slice(1) %>%
+ungroup() %>%
+count(player) %>%
+rename(no_matches_played = n) %>%
+arrange(desc(no_matches_played))
+matches_players %>% head(150)
+
+# Average and median of matches played by players
+stats_matches <- matches_players %>%
+summarize(avg_mat_played = mean(no_matches_played),
+med_mat_played = median(no_matches_played))
+
+top_contri_players <- top_contri_players %>%
+full_join(matches_players, by ="player") %>%
+mutate(player_contri_rate=(player_contribution+stats_contri$med_contri_pp)/
+(no_matches_played+stats_matches$avg_mat_played))
+top_contri_players %>%
+select(player, player_contribution, player_contri_rate) %>%
+arrange(desc(player_contri_rate)) %>%
+head(50) %>%
+knitr::kable()
+
+```
+
+### Inference: The Top Players with the highest contribution for their teams in winning and losing causes in 12 years of the IPL have been found out.
+
+* * *
+
+## TOP_EXCEL_PLAYERS:
+
+## Order of players with best performance against best bowlers and best batsmen  
+
+```{r}
+# Top 20 strike batsmen and top 20 economy bowlers
+top_20_batsmen <- str_rates %>%
+head(20)
+top_20_batsmen
+
+top_20_bowlers <- eco_rates %>%
+head(20)
+top_20_bowlers
+```
+
+```{r}
+# batsmen strike rate against top_20 bowlers
+sr_vs_t20_bowlers <- deliveries %>%
+filter(bowler %in% top_20_bowlers$player) %>%
+group_by(player = batsman) %>%
+summarize(sr_t20 = (sum(batsman_runs) + batsmen_avgs$median_runs) / (n() +
+batsmen_avgs$avg_balls)) %>%
+arrange(desc(sr_t20))
+sr_vs_t20_bowlers %>%
+head(20) %>%
+mutate(rank = row_number())
+
+# bowlers economy rate against top_20 batsmen
+er_vs_t20_batsmen <- deliveries %>%
+filter(batsman %in% top_20_batsmen$player) %>%
+group_by(player = bowler) %>%
+summarize(er_t20 = (sum(batsman_runs) + bowler_avgs$avg_runs) / (n() +
+bowler_avgs$median_balls)) %>%
+arrange(er_t20)
+er_vs_t20_batsmen %>%
+head(20) %>%
+mutate(rank = row_number())
+```
+
+### Inference: All Top 20 batsman may not have played against the top 20 bowlers, so we normalize by assuming that they would have scored less runs in average number of balls. Similarly, we can assume all bowlers would have given away more runs in less number of balls.
+
+```{r}
+# Top excellence players
+top_excel_players <- er_vs_t20_batsmen %>%
+full_join(sr_vs_t20_bowlers, by = "player") %>%
+mutate(sr_t20 = replace_na(sr_t20, batsmen_avgs$median_runs / batsmen_avgs$avg_balls)) %>%
+mutate(er_t20 = replace_na(er_t20, bowler_avgs$avg_runs / bowler_avgs$median_balls))
+
+# Top 50 Excellence Players
+top_excel_players %>%
+select(player, sr_t20, er_t20) %>%
+arrange(desc(sr_t20)) %>%
+head(50) %>%
+knitr::kable()
+
+```
+
+### Inference: The Top 50 outstanding players in the league among the best players in the league.
+
+* * *
+
+## TOP_CALIBER_PLAYERS:
+
+### Order of players based on their summarized player values
+
+
+#### 1. Players by their calibre - strike rate + economy rate, 
+#### 2. contribution in win/ loss situation and 
+#### 3. player's excellence against the best in business
+
+```{r}
+top_calibre_players <- top_rate_players %>%
+select(-player_value) %>%
+full_join(top_excel_players, by = "player") %>%
+mutate(sr_t20 = replace_na(sr_t20, batsmen_avgs$median_runs / batsmen_avgs$avg_balls)) %>%
+mutate(er_t20 = replace_na(er_t20, bowler_avgs$avg_runs / bowler_avgs$median_balls)) %>%
+full_join(top_contri_players, by="player") %>%
+mutate(player_value = 100 * ((reg_str_rate + sr_t20) + 1 /
+(reg_eco_rate + er_t20) +
+player_contri_rate)) %>%
+select(player, player_value) %>%
+arrange(desc(player_value)) %>%
+mutate(rank = row_number())
+top_calibre_players %>%
+head(20)
+```
+
+### Since, there are 8 teams in the IPL and they need a list of most valuable players in the league to pick based on the above calculated parameters, we suggested the top 150 MVP players based on their performances in the past years
+
+```{r}
+# Top 150 calibre players by player value
+top_150_calibre_players <- top_calibre_players %>%
+head(150)
+top_150_calibre_players%>%
+knitr::kable()
+
+```
+
+* * *
+
+## WIN Predictor
+
+### 1. Since we have seen venue, batting_turn, toss wins have significant effect on the runs scored and matches won by teams, we will consider “venue”, “toss_winner” & “toss_decision” variables along with “team1 (first team to bat)” & “team2 (second team to bat)” as predictor variables to predict the “winner (response variable)” of the match.
+
+### 2. We will only consider the top 8 teams, which have played the most matches and also the current teams for our model building and predictions.
+
+### 3. We have 8 different classifiers; 8 different teams that can win matches. Since this is a classification problem and our data is all factors, we use a few machine learning methods (“Naive Bayes”, “Regression Tree”, “Random Forest”, “Multinomial Regression”, “Linear Discriminant Analysis” and “K Nearest Neighbours”) to train models and predict results.
+
+### 4. Accuracy will not be the measure of our model prediction strength. This is because, we are not really interested in predicting negatives; rather we are more interested in positive predictions. Besides we have all factor data and many classifiers. Thus our metric of model evaluation will be “F1 Score”, which is based on “recall” and “precision”.
+
+### 5. What the models do is to predict the winner of a match given the opponent, venue, toss winner and toss decision.
+
+### 6. We will create two data sets, “train_set” and “test_set” for training and testing our model
+
+```{r}
+# Create the list of top 8 teams from matches_team (teams Vs matches played)
+
+# no.of matches played by each team
+played1 <- mat_ds %>%
+group_by(team1) %>%
+summarize(count1 = n()) %>%
+arrange(team1) %>%
+rename(team = team1)
+
+played2 <- mat_ds %>%
+group_by(team2) %>%
+summarize(count2 = n()) %>%
+arrange(team2) %>%
+rename(team = team2)
+
+matches_team <- played1 %>%
+full_join(played2, by = "team") %>%
+mutate(n_matches_played = count1 + count2) %>%
+select(team, n_matches_played) %>% arrange(desc(n_matches_played))
+
+
+teams <- matches_team %>%
+top_n(8) %>%
+select (team)
+teams
+```
+
+```{r}
+# Do required pre-processing and data wrangling
+dat_set <- matches %>%
+select(first_bat_team = team1,
+second_bat_team = team2, winner, venue, toss_winner, toss_decision) %>%
+filter(winner != "" & first_bat_team %in% teams$team & second_bat_team %in% teams$team) %>%
+mutate(first_bat_team = as.factor(first_bat_team), second_bat_team = as.factor(second_bat_team),
+winner = as.factor(winner), venue = as.factor(venue), toss_decision = as.factor(toss_decision),
+toss_winner = as.factor(toss_winner))
+any(is.na(dat_set))
+
+summary(dat_set)
+
+dim(dat_set)
+```
+
+```{r}
+library(caret)
+options(digits=4)
+set.seed(1, sample.kind="Rounding")
+
+# test set will be approx 10% of our dataset
+test_index <- createDataPartition(dat_set$winner, times = 1, p = 0.1, list = FALSE)
+train_set <- dat_set[-test_index,]
+temp_set <- dat_set[test_index,]
+
+# Make sure all variable values in test set are also in train set
+test_set <- temp_set %>%
+semi_join(train_set, by = "first_bat_team") %>%
+semi_join(train_set, by = "second_bat_team") %>%
+semi_join(train_set, by = "venue") %>%
+semi_join(train_set, by = "toss_decision") %>%
+semi_join(train_set, by = "toss_winner")
+
+# Add rows removed from temp set back into train set
+removed <- anti_join(temp_set, test_set)
+train_set <- rbind(train_set, removed)
+
+# Check dimensions & variable names of train_set and test_set
+dim(train_set)
+dim(test_set)
+names(train_set)
+names(test_set)
+```
+
+### Naive Bayes 
+
+```{r}
+# Fit the Model based on "Naive Bayes" method, predict, test, calculate F1 score for all classes
+fit_nb <- train(winner ~ ., method = "naive_bayes", data = train_set)
+pre_nb <- predict(fit_nb, test_set)
+F1_nb <- confusionMatrix(pre_nb, test_set$winner)$byClass[,"F1"]
+F1_nb <- as.data.frame(t(F1_nb)) %>% mutate(avg_F1_score = rowMeans(.))
+F1_nb
+```
+
+### Inference: As we can see, though Naive Bayes quickly converged in training the model, it did not predict for certain classes, thereby did not produce F1 scores for those classes.
+
+
+```{r}
+# Make column names more readable
+colnames(F1_nb) = gsub("Class: ", "", colnames(F1_nb))
+# F1 table for different models
+F1_table <- data.frame(Model = "Naive Bayes") %>% bind_cols(F1_nb)
+F1_table %>% knitr::kable()
+```
+
+* * *
+
+### Decision Tree
+
+```{r}
+# Fit the Model based on "rpart (CART)" method, predict, test, calculate F1 score for all classes
+fit_rp <- train(winner ~ ., method = "rpart", data = train_set)
+pre_rp <- predict(fit_rp, test_set)
+F1_rp <- confusionMatrix(pre_rp, test_set$winner)$byClass[,"F1"]
+F1_rp <- as.data.frame(t(F1_rp)) %>% mutate(avg_F1_score = rowMeans(.))
+F1_rp
+```
+
+```{r}
+# Make column names more readable
+colnames(F1_rp) = gsub("Class: ", "", colnames(F1_rp))
+# Update F1 table - continued.2
+F1_table <- bind_rows(F1_table,
+data.frame(Model = "CART (rpart)") %>% bind_cols(F1_rp))
+F1_table %>% knitr::kable()
+```
+
+* * *
+
+### Mulnomial Logistic Regression
+
+```{r}
+# Fit the Model based on "multinom" method, predict, test, calculate F1 score for all classes
+fit_mn <- train(winner ~ ., method = "multinom", data = train_set, trace = FALSE)
+pre_mn <- predict(fit_mn, test_set)
+F1_mn <- confusionMatrix(pre_mn, test_set$winner)$byClass[,"F1"]
+F1_mn <- as.data.frame(t(F1_mn)) %>% mutate(avg_F1_score = rowMeans(.))
+F1_mn
+```
+
+```{r}
+# Make column names more readable
+colnames(F1_mn) = gsub("Class: ", "", colnames(F1_mn))
+# Update F1 table - continued.4
+F1_table <- bind_rows(F1_table,
+data.frame(Model = "Multinom") %>% bind_cols(F1_mn))
+F1_table %>% knitr::kable()
+```
+* * *
+
+### Linear Discriminant Analysis
+
+```{r}
+# Fit the Model based on "LDA" method, predict, test, calculate F1 score for all classes
+fit_lda <- train(winner ~ ., method = "lda", data = train_set)
+pre_lda <- predict(fit_lda, test_set)
+F1_lda <- confusionMatrix(pre_lda, test_set$winner)$byClass[,"F1"]
+F1_lda <- as.data.frame(t(F1_lda)) %>% mutate(avg_F1_score = rowMeans(.))
+F1_lda
+```
+
+```{r}
+# Make column names more readable
+colnames(F1_lda) = gsub("Class: ", "", colnames(F1_lda))
+# Update F1 table - continued.5
+F1_table <- bind_rows(F1_table,
+data.frame(Model = "LDA") %>% bind_cols(F1_lda)) 
+
+F1_table %>% knitr::kable()
+
+```
+
+* * *
+
+### Random Forest
+
+```{r}
+# Fit the Model based on "rf (Random Forest)" method, predict, test,
+# calculate F1 score for all classes
+trainctrl <- trainControl(method="cv")
+fit_rf <- train(winner ~ ., method = "rf", data = train_set, trControl=trainctrl)
+pre_rf <- predict(fit_rf, test_set)
+F1_rf <- confusionMatrix(pre_rf, test_set$winner)$byClass[,"F1"]
+F1_rf <- as.data.frame(t(F1_rf)) %>% mutate(avg_F1_score = rowMeans(.))
+F1_rf
+```
+
+
+```{r}
+# Make column names more readable
+colnames(F1_rf) = gsub("Class: ", "", colnames(F1_rf))
+# Update F1 table - continued.3
+F1_table <- bind_rows(F1_table,
+data.frame(Model = "Random Forest (rf)") %>% bind_cols(F1_rf))
+
+F1_table %>% knitr::kable()
+```
+
+* * *
+
+### K-Nearest Neighbours
+
+```{r}
+# Fit the Model based on "KNN" method, predict, test, calculate F1 score for all classes
+fit_knn <- train(winner ~ ., method = "knn", data = train_set)
+pre_knn <- predict(fit_knn, test_set)
+F1_knn <- confusionMatrix(pre_knn, test_set$winner)$byClass[,"F1"]
+F1_knn <- as.data.frame(t(F1_knn)) %>% mutate(avg_F1_score = rowMeans(.))
+F1_knn
+
+# Make column names more readable
+colnames(F1_knn) = gsub("Class: ", "", colnames(F1_knn))
+# Update F1 table - Final
+F1_table <- bind_rows(F1_table,
+data.frame(Model = "KNN") %>% bind_cols(F1_knn))
+
+F1_table %>% knitr::kable()
+
+```
+
+### Inference: LDA and KNN performed much better than other ML Algorithms for predicting the winner of the match in terms of higher F-Score for all 8 teams.
+
+### The samples we have for different teams (number of observations) is not similar. Some teams have played much more matches than others. This introduces bias in our data and thus our models may not do effective job in predicting the winners. For example, “Chennai Super Kings”, which is top consistent performing team did not play for 2 seasons. This fact could have probably reduced its prediction as the winner by some of the models in favour of other team.
+
+* * *
+
+# Future Work
+
+## 1. Add Fielding Component to Player Analysis and Ratings
+
+## 2. Cluster Best Indian and Foreign Players based on their skill sets and Rating to predict the approximate price in the auction.
+
+## 3. Fantasy Team Suggestion for Fans for each match to maximise the points earned.
+
+## 4. Collect Real-Time data such as Wagon Wheel and Pitch Map of Players to formulate individual game plans.
+
+* * *
+
